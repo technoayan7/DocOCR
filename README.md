@@ -1,0 +1,1 @@
+DevOCR - AI-powered OCR
