@@ -33,27 +33,19 @@ function updateSummary() {
     `;
     html += '</div>';
 
-    // Display dynamic details for each file
+    // Display only filename and result field value
     html += '<div class="data-insights"><h3>Document Insights</h3><ul>';
     processingResults.forEach(result => {
         if (result.result) {
-            html += `<li><strong>${result.filename}</strong>: `;
+            let displayResult = '';
             if (Array.isArray(result.result)) {
-                result.result.forEach((item, idx) => {
-                    const itemFields = Object.entries(item)
-                        .map(([key, value]) => `${key} = ${value}`)
-                        .join(', ');
-                    html += `<div>Item ${idx + 1}: ${itemFields}</div>`;
-                });
+                displayResult = result.result.map((item, idx) => `Item ${idx + 1}: ${JSON.stringify(item)}`).join(' | ');
             } else if (typeof result.result === 'object') {
-                const fields = Object.entries(result.result)
-                    .map(([key, value]) => `${key} = ${value}`)
-                    .join(', ');
-                html += fields;
+                displayResult = JSON.stringify(result.result);
             } else {
-                html += result.result;
+                displayResult = result.result;
             }
-            html += `</li>`;
+            html += `<li><strong>${result.filename}</strong>: ${displayResult}</li>`;
         } else if (result.error) {
             html += `<li><strong>${result.filename}</strong>: Error = ${result.error}</li>`;
         }
@@ -63,11 +55,26 @@ function updateSummary() {
     resultsSummary.innerHTML = html;
 }
 
+// Add a helper function to flatten each processing result object
+function flattenResult(item) {
+    const flattened = { filename: item.filename, model: item.model };
+    if (item.result && typeof item.result === 'object' && !Array.isArray(item.result)) {
+        const keys = Object.keys(item.result);
+        if (keys.length > 0) {
+            flattened[keys[0]] = item.result[keys[0]];
+        }
+    }
+    else if (item.error) {
+        flattened.error = item.error;
+    }
+    return flattened;
+}
+
 // Download results button click handler
 downloadBtn.addEventListener('click', () => {
     if (processingResults.length === 0) return;
-
-    const blob = new Blob([JSON.stringify(processingResults, null, 2)], { type: 'application/json' });
+    const flattenedResults = processingResults.map(flattenResult);
+    const blob = new Blob([JSON.stringify(flattenedResults, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -98,18 +105,21 @@ copyBtn.addEventListener('click', () => {
 
 // Add CSV download button event listener
 downloadCSVBtn.addEventListener('click', () => {
-    // Build CSV header and rows
-    const header = ['Image Name', 'Model Name', 'Result'];
-    const rows = processingResults.map(item => {
-        // Use 'result' field; if object, stringify it, if error use error message
-        let resultValue = '';
-        if (item.result) {
-            resultValue = typeof item.result === 'object' ? JSON.stringify(item.result) : item.result;
-        } else if (item.error) {
-            resultValue = item.error;
+    const flattenedResults = processingResults.map(flattenResult);
+    let resultKey = "Result Value";
+    for (let item of flattenedResults) {
+        const keys = Object.keys(item);
+        // Exclude filename and model keys
+        const potentialKeys = keys.filter(k => k !== "filename" && k !== "model");
+        if (potentialKeys.length > 0) {
+            resultKey = potentialKeys[0];
+            break;
         }
-        // Escape commas by wrapping fields in quotes
-        return [`"${item.filename}"`, `"${item.model}"`, `"${resultValue}"`].join(',');
+    }
+    const header = ['Image Name', 'Model Name', resultKey];
+    const rows = flattenedResults.map(item => {
+        const value = item[resultKey] !== undefined ? item[resultKey] : "";
+        return [`"${item.filename}"`, `"${item.model}"`, `"${value}"`].join(',');
     });
     const csvContent = [header.join(','), ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -326,14 +336,14 @@ async function processAllImages() {
             const result = await processImageWithOpenRouter(file);
             processingResults.push({
                 filename: file.name,
-                model: document.getElementById('model').value, // New field for model name
-                result // Spread the entire result object
+                model: document.getElementById('model').value, // Store the selected model
+                result // Full result object
             });
         } catch (error) {
             processingResults.push({
                 filename: file.name,
                 model: document.getElementById('model').value,
-                error: error.message // Capture error message
+                error: error.message
             });
         }
         // Update progress bar percentage after each file processed
@@ -341,9 +351,20 @@ async function processAllImages() {
         progressBar.style.width = `${progressPercent}%`;
     }
 
-    // Display final results
+    // Create a displayResults array that omits the model field and unwraps the result object if it's an object
+    const displayResults = processingResults.map(item => {
+        if (item.result && typeof item.result === 'object' && !Array.isArray(item.result)) {
+            return { filename: item.filename, ...item.result };
+        } else if (item.error) {
+            return { filename: item.filename, error: item.error };
+        }
+        // For non-object results or arrays, simply include as is.
+        return { filename: item.filename, result: item.result };
+    });
+    resultsOutput.textContent = JSON.stringify(displayResults, null, 2);
+
+    // Display final results (model is excluded from summary display)
     resultsSection.style.display = 'block';
-    resultsOutput.textContent = JSON.stringify(processingResults, null, 2);
     updateSummary();
     copyBtn.style.display = 'inline-block';
     downloadBtn.style.display = 'inline-block';
