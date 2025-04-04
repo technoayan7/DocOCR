@@ -4,19 +4,32 @@ const multer = require('multer');
 const cors = require('cors');
 const fs = require('fs');
 const axios = require('axios');
+const path = require('path');  // Import the path module for serving files
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
 
+// Replace disk storage with memory storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// Enable CORS for frontend communication
 app.use(cors({
-    origin: ['https://technoayan7.github.io/DocOCR/'],
+    origin: ['https://technoayan7.github.io/DocOCR/'], // Add your frontend URL here
     credentials: true
 }));
+
 app.use(express.json());
 
-app.post('/api/process-image', upload.single('image'), async (req, res) => {
-    let tempFilePath = null;
+// Serve static files from the root directory
+app.use(express.static(path.join(__dirname))); // This will serve all files in the root directory
 
+// Route to serve your index.html file
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));  // Adjust the path if your index.html is in a different location
+});
+
+// API route for processing the image
+app.post('/api/process-image', upload.single('image'), async (req, res) => {
     try {
         // Added model field with fallback default value
         const {
@@ -29,8 +42,7 @@ app.post('/api/process-image', upload.single('image'), async (req, res) => {
 
         if (!req.file) throw new Error('No image file provided');
 
-        tempFilePath = req.file.path;
-        const imageBuffer = fs.readFileSync(tempFilePath);
+        const imageBuffer = req.file.buffer;
         const imageBase64 = imageBuffer.toString('base64');
 
         const temperatureValue = Math.min(Math.max(parseFloat(temperature) || 0.1, 0), 1);
@@ -68,10 +80,7 @@ app.post('/api/process-image', upload.single('image'), async (req, res) => {
             }
         );
 
-        // console.log('Full AI Response:', response.data); // Log entire response for debugging
-
         const rawContent = response.data.choices[0]?.message?.content || '{}';
-        // console.log('Raw AI Response:', rawContent); // Log raw response for debugging
 
         const sanitizedContent = rawContent.replace(/```(?:\w+)?\n([\s\S]*?)```/g, '$1').trim();
 
@@ -95,13 +104,10 @@ app.post('/api/process-image', upload.single('image'), async (req, res) => {
             success: false,
             error: error.response?.data?.error?.message || error.message
         });
-    } finally {
-        if (tempFilePath && fs.existsSync(tempFilePath)) {
-            fs.unlinkSync(tempFilePath); // Clean up temporary file
-        }
     }
 });
 
+// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
