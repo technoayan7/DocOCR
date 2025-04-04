@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocOCR - Document Verification with OCR</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <div class="logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <line x1="10" y1="9" x2="8" y2="9"></line>
+                    </svg>
+                    <h1>DocOCR</h1>
+                </div>
+                <p class="tagline">Fast, accurate document verification with AI-powered OCR</p>
+            </div>
+        </header>
+
+        <div class="section">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+                AI Configuration
+            </h2>
+            <div class="config-section">
+                <div>
+                    <label for="prompt">
+                        Processing Prompt
+                        <div class="tooltip">
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                            <span class="tooltip-text">Instructions given to the AI to extract information from
+                                documents.</span>
+                        </div>
+                    </label>
+                    <textarea id="prompt" placeholder="Enter your Prompt here"></textarea>
+                </div>
+                <div>
+                    <label for="temperature">
+                        Temperature
+                        <div class="tooltip">
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                            <span class="tooltip-text">Controls the randomness of outputs. Lower values produce more
+                                deterministic results.</span>
+                        </div>
+                    </label>
+                    <input type="number" id="temperature" min="0" max="1" step="0.1" value="0.1">
+                    <label for="model">
+                        Model Name
+                        <div class="tooltip">
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12" y2="16"></line>
+                            </svg>
+                            <span class="tooltip-text">Select the model name to use for processing.</span>
+                        </div>
+                    </label>
+                    <select id="model" class="styled-select">
+                        <option value="google/gemini-flash-1.5">google/gemini-flash-1.5</option>
+                        <option value="google/gemini-flash-1.5" selected>google/gemini-2.0-flash-lite-001</option>
+                        <option value="google/gemini-2.0-flash-001">google/gemini-2.0-flash-001</option>
+                        <option value="google/gemini-2.5-pro-exp-03-25:free">google/gemini-2.5-pro-exp-03-25:free</option>
+                        <option value="anthropic/claude-3-sonnet:beta">anthropic/claude-3-sonnet:beta</option>
+                        <option value="anthropic/claude-3.5-sonnet">anthropic/claude-3.5-sonnet</option>
+                        <option value="anthropic/claude-3.5-sonnet:beta">anthropic/claude-3.5-sonnet:beta</option>
+                        <option value="anthropic/claude-3.7-sonnet:thinking">anthropic/claude-3.7-sonnet:thinking</option>
+                        <option value="anthropic/claude-3.7-sonnet">anthropic/claude-3.7-sonnet</option>
+                        <option value="openai/o1-mini">openai/o1-mini</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path>
+                    <line x1="16" y1="5" x2="22" y2="5"></line>
+                    <line x1="19" y1="2" x2="19" y2="8"></line>
+                    <circle cx="9" cy="9" r="2"></circle>
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                </svg>
+                Document Upload
+                <span class="file-count" id="fileCount">0</span>
+            </h2>
+
+            <div class="file-upload" id="dropZone">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p>Drag & drop identity documents here or</p>
+                <button class="file-upload-button">Browse Files</button>
+                <p>Supported formats: JPG, PNG, PDF</p>
+                <input type="file" id="imageFiles" accept="image/*" multiple>
+            </div>
+
+            <div class="file-list" id="fileList">
+                <!-- File items will be added here -->
+            </div>
+
+            <button id="processBtn" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2v6h.01"></path>
+                    <path d="M10 2v6h.01"></path>
+                    <path d="M14 2v6h.01"></path>
+                    <path d="M18 2v6h.01"></path>
+                    <path d="M8 16a6 6 0 1 0 12 0 6 6 0 1 0-12 0Z"></path>
+                    <path d="M18 16v-1"></path>
+                    <path d="M18 20v-.01"></path>
+                </svg>
+                Process Documents
+            </button>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="status" id="statusText">Ready to process images...</div>
+            </div>
+        </div>
+
+        <div class="section results" id="resultsSection">
+            <div class="results-header">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 11.08V8l-6-6H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2v-3.08"></path>
+                        <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                        <rect x="8" y="12" width="8" height="2"></rect>
+                        <rect x="8" y="16" width="8" height="2"></rect>
+                    </svg>
+                    Results
+                </h2>
+            </div>
+
+            <div class="result-tabs">
+                <div class="tab active" data-tab="json">JSON</div>
+                <div class="tab" data-tab="summary">Summary</div>
+            </div>
+
+            <div class="results-content" id="jsonTab">
+                <pre id="resultsOutput">Results will appear here after processing.</pre>
+            </div>
+
+            <div class="results-content" id="summaryTab" style="display: none;">
+                <div id="resultsSummary">Summary will be generated after processing.</div>
+            </div>
+
+            <div class="actions">
+                <button id="downloadBtn" class="btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download JSON
+                </button>
+                <button id="copyBtn" class="btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy Results
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
