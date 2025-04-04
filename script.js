@@ -55,22 +55,19 @@ function updateSummary() {
     resultsSummary.innerHTML = html;
 }
 
-// Add a helper function to flatten each processing result object
+// Updated helper function to flatten each processing result object by merging all result keys.
 function flattenResult(item) {
     const flattened = { filename: item.filename, model: item.model };
     if (item.result && typeof item.result === 'object' && !Array.isArray(item.result)) {
-        const keys = Object.keys(item.result);
-        if (keys.length > 0) {
-            flattened[keys[0]] = item.result[keys[0]];
-        }
-    }
-    else if (item.error) {
+        // Merge all key-value pairs from result
+        Object.assign(flattened, item.result);
+    } else if (item.error) {
         flattened.error = item.error;
     }
     return flattened;
 }
 
-// Download results button click handler
+// Update JSON download handler to use the updated flattened results
 downloadBtn.addEventListener('click', () => {
     if (processingResults.length === 0) return;
     const flattenedResults = processingResults.map(flattenResult);
@@ -106,21 +103,32 @@ copyBtn.addEventListener('click', () => {
 // Add CSV download button event listener
 downloadCSVBtn.addEventListener('click', () => {
     const flattenedResults = processingResults.map(flattenResult);
-    let resultKey = "Result Value";
-    for (let item of flattenedResults) {
-        const keys = Object.keys(item);
-        // Exclude filename and model keys
-        const potentialKeys = keys.filter(k => k !== "filename" && k !== "model");
-        if (potentialKeys.length > 0) {
-            resultKey = potentialKeys[0];
-            break;
-        }
-    }
-    const header = ['Image Name', 'Model Name', resultKey];
-    const rows = flattenedResults.map(item => {
-        const value = item[resultKey] !== undefined ? item[resultKey] : "";
-        return [`"${item.filename}"`, `"${item.model}"`, `"${value}"`].join(',');
+    
+    // Compute union of all result keys (excluding filename and model)
+    const resultKeysSet = new Set();
+    flattenedResults.forEach(item => {
+        Object.keys(item).forEach(key => {
+            if (key !== 'filename' && key !== 'model') {
+                resultKeysSet.add(key);
+            }
+        });
     });
+    const resultKeys = Array.from(resultKeysSet);
+    
+    // Construct header row with fixed columns plus dynamic result keys
+    const header = ['Image Name', 'Model Name', ...resultKeys];
+    
+    // Construct rows using header order
+    const rows = flattenedResults.map(item => {
+        const row = [];
+        row.push(`"${item.filename}"`);
+        row.push(`"${item.model}"`);
+        resultKeys.forEach(key => {
+            row.push(`"${item[key] !== undefined ? item[key] : ''}"`);
+        });
+        return row.join(',');
+    });
+    
     const csvContent = [header.join(','), ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
