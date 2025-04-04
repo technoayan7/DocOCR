@@ -5,7 +5,7 @@ let promptTextarea;
 let temperatureInput;
 
 // Define API base URL
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'https://dococr.onrender.com';
 
 // Generate summary from results
 function updateSummary() {
