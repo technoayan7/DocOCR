@@ -96,6 +96,36 @@ copyBtn.addEventListener('click', () => {
     });
 });
 
+// Add CSV download button event listener
+downloadCSVBtn.addEventListener('click', () => {
+    // Build CSV header and rows
+    const header = ['Image Name', 'Model Name', 'Result'];
+    const rows = processingResults.map(item => {
+        // Use 'result' field; if object, stringify it, if error use error message
+        let resultValue = '';
+        if (item.result) {
+            resultValue = typeof item.result === 'object' ? JSON.stringify(item.result) : item.result;
+        } else if (item.error) {
+            resultValue = item.error;
+        }
+        // Escape commas by wrapping fields in quotes
+        return [`"${item.filename}"`, `"${item.model}"`, `"${resultValue}"`].join(',');
+    });
+    const csvContent = [header.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // Create a timestamp for the filename
+    const date = new Date();
+    const timestamp = date.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.download = `document-results-${timestamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+});
+
 // Helper function to sanitize response text
 function sanitizeResponse(text) {
     // Remove any code fences or backticks
@@ -296,12 +326,14 @@ async function processAllImages() {
             const result = await processImageWithOpenRouter(file);
             processingResults.push({
                 filename: file.name,
+                model: document.getElementById('model').value, // New field for model name
                 result // Spread the entire result object
             });
         } catch (error) {
             processingResults.push({
                 filename: file.name,
-                error: error.message
+                model: document.getElementById('model').value,
+                error: error.message // Capture error message
             });
         }
         // Update progress bar percentage after each file processed
