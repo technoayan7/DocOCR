@@ -14,14 +14,14 @@ const upload = multer({ storage });
 
 // Enable CORS for frontend communication
 app.use(cors({
-    origin: ['https://technoayan7.github.io/DocOCR/'], // Add your frontend URL here
+    origin: ['https://technoayan7.github.io', 'https://dococr.onrender.com'],  // No need to specify sub-path like /DocOCR/
     credentials: true
 }));
 
 app.use(express.json());
 
 // Serve static files from the root directory
-app.use(express.static(path.join(__dirname))); // This will serve all files in the root directory
+app.use(express.static(path.join(__dirname)));  // This will serve all files in the root directory
 
 // Route to serve your index.html file
 app.get('/', (req, res) => {
@@ -99,7 +99,7 @@ app.post('/api/process-image', upload.single('image'), async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error processing image:', error);  // Enhanced error logging
         res.status(500).json({
             success: false,
             error: error.response?.data?.error?.message || error.message
