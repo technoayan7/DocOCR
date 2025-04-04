@@ -9,7 +9,7 @@ const app = express();
 const upload = multer({ dest: 'uploads/' });
 
 app.use(cors({
-    origin: ['http://localhost:8000', 'http://127.0.0.1:8000'],
+    origin: ['https://technoayan7.github.io/DocOCR/'],
     credentials: true
 }));
 app.use(express.json());
