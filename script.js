@@ -330,12 +330,13 @@ async function processAllImages() {
     const files = Array.from(imageFilesInput.files);
     if (!files.length) return;
 
-    // Show progress indicator and reset progress bar
+    // Record overall start time
+    const overallStartTime = performance.now();
+
     progressContainer.style.display = 'block';
     progressBar.style.width = '0%';
     statusText.textContent = 'Processing documents...';
     statusText.className = 'status loading';
-
     processingResults = [];
 
     for (let i = 0; i < files.length; i++) {
@@ -354,24 +355,37 @@ async function processAllImages() {
                 error: error.message
             });
         }
-        // Update progress bar percentage after each file processed
         const progressPercent = ((i + 1) / files.length) * 100;
         progressBar.style.width = `${progressPercent}%`;
     }
+    
+    // Record overall end time and calculate average latency
+    const overallEndTime = performance.now();
+    const totalTime = overallEndTime - overallStartTime;
+    const avgLatencySec = (totalTime / files.length / 1000).toFixed(2);
 
-    // Create a displayResults array that omits the model field and unwraps the result object if it's an object
+    // Update latency display element with an icon and average latency in sec
+    const latencyDisplay = document.getElementById('latencyDisplay');
+    if (latencyDisplay) {
+        latencyDisplay.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Average Latency: ${avgLatencySec} sec
+        `;
+    }
+
     const displayResults = processingResults.map(item => {
         if (item.result && typeof item.result === 'object' && !Array.isArray(item.result)) {
             return { filename: item.filename, ...item.result };
         } else if (item.error) {
             return { filename: item.filename, error: item.error };
         }
-        // For non-object results or arrays, simply include as is.
         return { filename: item.filename, result: item.result };
     });
     resultsOutput.textContent = JSON.stringify(displayResults, null, 2);
 
-    // Display final results (model is excluded from summary display)
     resultsSection.style.display = 'block';
     updateSummary();
     copyBtn.style.display = 'inline-block';
@@ -402,4 +416,20 @@ function init() {
 }
 
 // Run initialization when DOM is loaded
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+
+    // Tab switching functionality for results
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const targetTab = tab.getAttribute('data-tab') + "Tab";
+            document.querySelectorAll('.results-content').forEach(content => {
+                content.style.display = "none";
+            });
+            document.getElementById(targetTab).style.display = "block";
+            tabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+        });
+    });
+});
