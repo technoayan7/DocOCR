@@ -15,6 +15,10 @@ function updateSummary() {
     const totalFiles = processingResults.length;
     const successfulFiles = processingResults.filter(r => r.result).length;
     const failedFiles = processingResults.filter(r => r.error).length;
+    
+    // Calculate average latency
+    const totalLatency = processingResults.reduce((sum, r) => sum + (r.latency || 0), 0);
+    const avgLatency = totalFiles > 0 ? (totalLatency / totalFiles).toFixed(2) : 0;
 
     // Generate stats
     html += `
@@ -30,12 +34,18 @@ function updateSummary() {
             <div class="stat-value">${failedFiles}</div>
             <div class="stat-label">Failed</div>
         </div>
+        <div class="stat-item">
+            <div class="stat-value">${avgLatency}</div>
+            <div class="stat-label">Avg Latency (sec)</div>
+        </div>
     `;
     html += '</div>';
 
-    // Display only filename and result field value
+    // Display filename, result field value, and latency
     html += '<div class="data-insights"><h3>Document Insights</h3><ul>';
     processingResults.forEach(result => {
+        const latencyStr = result.latency ? ` (${result.latency.toFixed(2)}s)` : '';
+        
         if (result.result) {
             let displayResult = '';
             if (Array.isArray(result.result)) {
@@ -45,9 +55,9 @@ function updateSummary() {
             } else {
                 displayResult = result.result;
             }
-            html += `<li><strong>${result.filename}</strong>: ${displayResult}</li>`;
+            html += `<li><strong>${result.filename}${latencyStr}</strong>: ${displayResult}</li>`;
         } else if (result.error) {
-            html += `<li><strong>${result.filename}</strong>: Error = ${result.error}</li>`;
+            html += `<li><strong>${result.filename}${latencyStr}</strong>: Error = ${result.error}</li>`;
         }
     });
     html += '</ul></div>';
@@ -57,7 +67,12 @@ function updateSummary() {
 
 // Updated helper function to flatten each processing result object by merging all result keys.
 function flattenResult(item) {
-    const flattened = { filename: item.filename, model: item.model };
+    const flattened = { 
+        filename: item.filename, 
+        model: item.model,
+        latency: item.latency
+    };
+    
     if (item.result && typeof item.result === 'object' && !Array.isArray(item.result)) {
         // Merge all key-value pairs from result
         Object.assign(flattened, item.result);
@@ -104,11 +119,11 @@ copyBtn.addEventListener('click', () => {
 downloadCSVBtn.addEventListener('click', () => {
     const flattenedResults = processingResults.map(flattenResult);
     
-    // Compute union of all result keys (excluding filename and model)
+    // Compute union of all result keys (excluding filename, model, and latency)
     const resultKeysSet = new Set();
     flattenedResults.forEach(item => {
         Object.keys(item).forEach(key => {
-            if (key !== 'filename' && key !== 'model') {
+            if (key !== 'filename' && key !== 'model' && key !== 'latency') {
                 resultKeysSet.add(key);
             }
         });
@@ -116,13 +131,14 @@ downloadCSVBtn.addEventListener('click', () => {
     const resultKeys = Array.from(resultKeysSet);
     
     // Construct header row with fixed columns plus dynamic result keys
-    const header = ['Image Name', 'Model Name', ...resultKeys];
+    const header = ['Image Name', 'Model Name', 'Latency (sec)', ...resultKeys];
     
     // Construct rows using header order
     const rows = flattenedResults.map(item => {
         const row = [];
         row.push(`"${item.filename}"`);
         row.push(`"${item.model}"`);
+        row.push(`"${item.latency !== undefined ? item.latency.toFixed(2) : ''}"`);
         resultKeys.forEach(key => {
             row.push(`"${item[key] !== undefined ? item[key] : ''}"`);
         });
@@ -299,6 +315,34 @@ function addSummaryStyles() {
             border-color: var(--primary);
             background-color: rgba(58, 134, 255, 0.05);
         }
+        
+        .latency-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        
+        .latency-table th, .latency-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .latency-table th {
+            background-color: var(--gray-100);
+            font-weight: 500;
+        }
+        
+        .latency-table tr:hover {
+            background-color: rgba(58, 134, 255, 0.05);
+        }
+        
+        #latencyTab {
+            padding: 16px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
     `;
     document.head.appendChild(style);
 }
@@ -325,7 +369,80 @@ function initFileUpload() {
     });
 }
 
-// Process all uploaded images
+// Function to update latency display table
+function updateLatencyTable() {
+    // Create a latency tab if it doesn't exist
+    if (!document.getElementById('latencyTab')) {
+        const resultsTabs = document.querySelector('.results-tabs');
+        const newTab = document.createElement('div');
+        newTab.className = 'tab';
+        newTab.setAttribute('data-tab', 'latency');
+        newTab.textContent = 'Latency';
+        resultsTabs.appendChild(newTab);
+        
+        const newTabContent = document.createElement('div');
+        newTabContent.id = 'latencyTab';
+        newTabContent.className = 'results-content';
+        newTabContent.style.display = 'none';
+        document.getElementById('resultsSection').appendChild(newTabContent);
+        
+        // Add click handler for the new tab
+        newTab.addEventListener('click', () => {
+            document.querySelectorAll('.results-content').forEach(content => {
+                content.style.display = "none";
+            });
+            document.getElementById('latencyTab').style.display = "block";
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove("active"));
+            newTab.classList.add("active");
+        });
+    }
+    
+    // Calculate average latency
+    const totalLatency = processingResults.reduce((sum, r) => sum + (r.latency || 0), 0);
+    const avgLatency = processingResults.length > 0 ? 
+        (totalLatency / processingResults.length).toFixed(2) : 0;
+    
+    // Generate latency table HTML
+    let html = `
+        <h3>Latency Metrics</h3>
+        <div class="stat-item" style="margin-bottom: 16px; width: 200px;">
+            <div class="stat-value">${avgLatency}s</div>
+            <div class="stat-label">Mean Latency</div>
+        </div>
+        <table class="latency-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Document</th>
+                    <th>Latency (sec)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    processingResults.forEach((result, index) => {
+        const status = result.error ? 'Failed' : 'Success';
+        const statusClass = result.error ? 'error' : 'success';
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${result.filename}</td>
+                <td>${result.latency ? result.latency.toFixed(2) : '-'}</td>
+                <td class="${statusClass}">${status}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    document.getElementById('latencyTab').innerHTML = html;
+}
+
+// Process all uploaded images sequentially
 async function processAllImages() {
     const files = Array.from(imageFilesInput.files);
     if (!files.length) return;
@@ -335,34 +452,53 @@ async function processAllImages() {
 
     progressContainer.style.display = 'block';
     progressBar.style.width = '0%';
-    statusText.textContent = 'Processing documents...';
+    statusText.textContent = 'Processing documents sequentially...';
     statusText.className = 'status loading';
     processingResults = [];
 
+    // Process files sequentially with individual latency tracking
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        statusText.textContent = `Processing document ${i+1}/${files.length}: ${file.name}`;
+        
+        // Record individual start time
+        const startTime = performance.now();
+        
         try {
             const result = await processImageWithOpenRouter(file);
-            processingResults.push({
-                filename: file.name,
-                model: document.getElementById('model').value, // Store the selected model
-                result // Full result object
-            });
-        } catch (error) {
+            
+            // Calculate individual latency
+            const endTime = performance.now();
+            const latency = (endTime - startTime) / 1000; // Convert to seconds
+            
             processingResults.push({
                 filename: file.name,
                 model: document.getElementById('model').value,
-                error: error.message
+                result,
+                latency
+            });
+        } catch (error) {
+            // Calculate latency even for errors
+            const endTime = performance.now();
+            const latency = (endTime - startTime) / 1000; // Convert to seconds
+            
+            processingResults.push({
+                filename: file.name,
+                model: document.getElementById('model').value,
+                error: error.message,
+                latency
             });
         }
+        
+        // Update progress bar
         const progressPercent = ((i + 1) / files.length) * 100;
         progressBar.style.width = `${progressPercent}%`;
     }
     
     // Record overall end time and calculate average latency
     const overallEndTime = performance.now();
-    const totalTime = overallEndTime - overallStartTime;
-    const avgLatencySec = (totalTime / files.length / 1000).toFixed(2);
+    const totalTime = (overallEndTime - overallStartTime) / 1000; // Convert to seconds
+    const avgLatencySec = (totalTime / files.length).toFixed(2);
 
     // Update latency display element with an icon and average latency in sec
     const latencyDisplay = document.getElementById('latencyDisplay');
@@ -372,26 +508,33 @@ async function processAllImages() {
                 <circle cx="12" cy="12" r="10"></circle>
                 <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            Average Latency: ${avgLatencySec} sec
+            Average Latency: ${avgLatencySec} sec | Total Time: ${totalTime.toFixed(2)} sec
         `;
     }
 
     const displayResults = processingResults.map(item => {
+        const result = { 
+            filename: item.filename, 
+            latency: item.latency ? item.latency.toFixed(2) + 's' : '-'
+        };
+        
         if (item.result && typeof item.result === 'object' && !Array.isArray(item.result)) {
-            return { filename: item.filename, ...item.result };
+            return { ...result, ...item.result };
         } else if (item.error) {
-            return { filename: item.filename, error: item.error };
+            return { ...result, error: item.error };
         }
-        return { filename: item.filename, result: item.result };
+        return { ...result, result: item.result };
     });
+    
     resultsOutput.textContent = JSON.stringify(displayResults, null, 2);
 
     resultsSection.style.display = 'block';
     updateSummary();
+    updateLatencyTable();
     copyBtn.style.display = 'inline-block';
     downloadBtn.style.display = 'inline-block';
 
-    statusText.textContent = 'Done processing!';
+    statusText.textContent = `Done processing! Total time: ${totalTime.toFixed(2)}s`;
     statusText.className = 'status success';
 }
 
